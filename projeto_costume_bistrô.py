@@ -1,6 +1,7 @@
 import os
 import json
 import unicodedata
+import pandas as pd
 
 #======== UTILIDADES ========
 def limpar_tela():
@@ -21,13 +22,23 @@ def carregar_dados(arquivo="vinhos.json"):
 def salvar_dados(vinhos, arquivo="vinhos.json"):
     with open(arquivo, "w", encoding="utf-8") as f:
         json.dump(vinhos, f, ensure_ascii=False, indent=4)
+        
 
 #===== CADASTRo DE VINHOS ========
 def cadastrar_vinho(vinhos):
     
     while True:
         limpar_tela()
-        nome = input('Digite o nome do vinho: ').strip()
+        nome = input('Digite o nome do vinho (Digite 0 para sair): ').strip()
+        
+        if nome == '0':
+            print('❌  Operação cancelada pelo usuário.')
+            input('\nTecle enter para sair...')
+            return
+        if not nome.strip():
+            print("⚠️  Não pode conter espaços em branco.")
+            input('\nTecle enter para continuar...')
+            continue
         for vinho in vinhos:
             if normalizar(vinho['nome']).lower() == normalizar(nome).lower():
                 print('Vinho já cadastrado!')
@@ -55,7 +66,7 @@ def cadastrar_vinho(vinhos):
                 continue
         dados_vinho = {'nome': nome, 'tipo': tipo, 'regiao': regiao, 'quantidade': 0, 'preco': preco}
         
-        #sorted(vinhos[0]['nome'])
+        
         vinhos.append(dados_vinho)
         vinhos.sort(key=lambda v: normalizar(v['nome']))
         print(f"💾  {nome} cadastrado com sucesso!")
@@ -69,18 +80,36 @@ def cadastrar_vinho(vinhos):
         if resp == 'N':
             return
 
+#===== EXPORTAR PARA EXCEL ======
+def exportar_para_excel(vinhos, arquivo="vinhos.xlsx"):
+    if not vinhos:
+        print("⚠️  Não há vinhos para exportar.")
+        input('\nTecle enter para sair...')
+        return
+    
+    df = pd.DataFrame(vinhos)
+    df.to_excel(arquivo, index=False)
+    print(f"✅  Dados exportados com sucesso para {arquivo}")
+    input('\nTecle enter para sair...')
 #===== ADICIONA VINHO AO ESTOQUE =====
 def adicionar_vinho(vinhos):
 
     while True:
         limpar_tela()
+        print("=-" * 40)
+        print(f"{'COD':<4} {'NOME':>10}   {'TIPO':>33}  {'QTD':>8} {'PREÇO':>14}")
+        print("=-" * 40)
 
-        for i, vinho in enumerate(vinhos, start=1):
-            print('=-=-' * 25)
-            print(f"{i}. Nome: {vinho['nome']}  Tipo: {vinho['tipo']}"
-                f"  Região: {vinho['regiao']} Qtd: {vinho['quantidade']}")
-        print('=-=-' * 25)
+        for i, v in enumerate(vinhos, start=1):
+            print('=-=-'*20)
+            nome = v['nome'][:36]
+            Tipo = v['tipo'][:8]
+            # if v['quantidade'] > 0:
+            print(f"{i:<4} {nome:<36}"
+                f"     {Tipo:<12} {v['quantidade']:<10} {v['preco']:.2f}€")
+        print('=-=-'*20)
 
+        
         try:
             opc = int(input('Digite o índice do produto: '))
             if opc < 1 or opc > len(vinhos):
@@ -118,6 +147,7 @@ def adicionar_vinho(vinhos):
                         print('⚠️  Valor inválido.')
                         input('\nCarregue Enter para continuar...')
                         continue
+        
         while True:
             resp = input('Quer continuar [S/N]?').strip().upper()
             if resp in ('S', 'N'):
@@ -125,11 +155,12 @@ def adicionar_vinho(vinhos):
             print('⚠️  Digite S para sim e N para não.')
         if resp == 'N':
             return
-                        
-    input('Carregue Enter para continuar...')
+
+
 
 #Retirada de vinho do estoque
 def retirar_vinho(vinhos):
+    
     while True:
         limpar_tela()
 
@@ -151,6 +182,7 @@ def retirar_vinho(vinhos):
             print('⚠️  Opção inválida')
             input('\nCarregue Enter para continuar...')
             return
+        
         while True:
             try:
                 qtd = int(input('Digite a quantidade de retirada desejada: '))
@@ -225,8 +257,10 @@ def editar_vinho(vinhos):
     print('[3] para editar região')
     print('[4] para editar preço')
     print('[5] para sair')
+
     escolha = int(input('digite sua opção:'))
     match escolha:
+
         case 1:
             nome = input('Nome do vinho (Enter p/cancelar): ').strip()
             if not nome.strip():
@@ -234,26 +268,55 @@ def editar_vinho(vinhos):
                 return
             vinhos[opc -1].update({'nome': nome})
             print(f'💾  editado "{nome}" com sucesso.')
+            vinhos.sort(key=lambda v: normalizar(v['nome']))
+            #salvar_dados(vinhos)
             input('\nCarregue Enter para continuar...')
+        
         case 2:
             tipo = input('digite o tipo de vinho: ').strip()
             vinhos[opc -1].update({'tipo': tipo})
             print(f'💾  editado o tipo para "{tipo}" com sucesso.')
             vinhos.sort(key=lambda v: normalizar(v['nome']))
-            salvar_dados(vinhos)
+            #salvar_dados(vinhos)
             input('\nCarregue Enter para continuar...')
-            
-    #print(produto_escolhido)
+
+        case 3:
+            regiao = input('Região: ')
+            vinhos[opc - 1].update({'região': regiao})
+            print(f'💾  editado o tipo para "{regiao}" com sucesso.')
+            vinhos.sort(key=lambda v: normalizar(v['nome']))
+            #salvar_dados(vinhos)
+            input('\nCarregue Enter para continuar...')
+
+        case 4:
+            preco = float(input('Preço: $'))
+            vinhos[opc - 1].update({'preco': preco})
+            print(f'💾  editado o tipo para ${preco:.2f} com sucesso.')
+            vinhos.sort(key=lambda v: normalizar(v['nome']))
+            #salvar_dados(vinhos)
+            input('\nCarregue Enter para continuar...')
+        case 5:
+            return
+        
+    
 
     input('\nCarregue Enter para continuar...')
 #===== LISTA A QUANTIDADE DE VINHOS ======
 def listar_vinhos(vinhos):
+    print("=-" * 40)
+    print(f"{'COD':<4} {'NOME':>10}  {'TIPO':>28}{'QTD':>8} {'PREÇO':>14}")
+    print("=-" * 40)
+
     for i, v in enumerate(vinhos, start=1):
+        nome = v['nome'][:30]
         if v['quantidade'] > 0:
-            print("=-" *40)
-            print(f"{i}. {v['nome']}   qtd: {v['quantidade']}")
-    print("=-" *40)
+            print(f"{i:<4} {v['nome']:<30}"
+                f"     {v['tipo']:<10} {v['quantidade']:<11} {v['preco']:.2f}€")
+
+
+    print("=-" * 40)
     input('\nTecle enter para sair...')
+
     
 #===== MENU DO PROGRAMA =========
 def menu():
@@ -266,7 +329,8 @@ def menu():
     print('[4] Remover vinho')
     print('[5] Editar vinho')
     print('[6] Listar Estoque vinhos')
-    print('[7] Sair')
+    print('[7] Exportar estoque para excel')
+    print('[8] Sair')
     print('=-=-' * 7)
 
 #==== LISTA DE DICIONÁRIOS =======
@@ -277,6 +341,7 @@ salvar_dados(vinhos)
 
 # ====== PROGRAMA PRINCIPAL =======
 while True:
+    
     while True:
         limpar_tela()
         menu()
@@ -288,6 +353,7 @@ while True:
                 break
         except ValueError:
             print('⚠️  Opção inválida.')
+
     match opcao:
         case 1:
             cadastrar_vinho(vinhos)
@@ -302,6 +368,8 @@ while True:
         case 6:
             listar_vinhos(vinhos)
         case 7:
+            exportar_para_excel(vinhos)
+        case 8:
             break
 
 # print(vinhos)
